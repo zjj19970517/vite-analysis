@@ -1,0 +1,8 @@
+{
+  "name": "@vitejs/vite-benchmark",
+  "private": true,
+  "devDependencies": {
+    "execa": "^7.0.0",
+    "vite-plugin-inspect": "^0.7.16"
+  }
+}
