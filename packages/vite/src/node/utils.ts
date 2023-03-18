@@ -33,7 +33,7 @@ import {
 } from './constants'
 import type { DepOptimizationConfig } from './optimizer'
 import type { ResolvedConfig } from './config'
-import type { ResolvedServerUrls } from './server'
+import type { ResolvedServerUrls, ViteDevServer } from './server'
 import type { CommonServerOptions } from '.'
 
 /**
@@ -79,6 +79,7 @@ export const flattenId = (id: string): string =>
     .replace(/[/:]/g, '_')
     .replace(/\./g, '__')
     .replace(/(\s*>\s*)/g, '___')
+    .replace(/#/g, '____')
 
 export const normalizeId = (id: string): string =>
   id.replace(/(\s*>\s*)/g, ' > ')
@@ -160,11 +161,12 @@ export function nestedResolveFrom(
   id: string,
   basedir: string,
   preserveSymlinks = false,
+  ssr = false,
 ): string {
   const pkgs = id.split('>').map((pkg) => pkg.trim())
   try {
     for (const pkg of pkgs) {
-      basedir = resolveFrom(pkg, basedir, preserveSymlinks)
+      basedir = resolveFrom(pkg, basedir, preserveSymlinks, ssr)
     }
   } catch {}
   return basedir
@@ -813,6 +815,19 @@ export async function getLocalhostAddressIfDiffersFromDNS(): Promise<
     nodeResult.family === dnsResult.family &&
     nodeResult.address === dnsResult.address
   return isSame ? undefined : nodeResult.address
+}
+
+export function diffDnsOrderChange(
+  oldUrls: ViteDevServer['resolvedUrls'],
+  newUrls: ViteDevServer['resolvedUrls'],
+): boolean {
+  return !(
+    oldUrls === newUrls ||
+    (oldUrls &&
+      newUrls &&
+      arrayEqual(oldUrls.local, newUrls.local) &&
+      arrayEqual(oldUrls.network, newUrls.network))
+  )
 }
 
 export interface Hostname {

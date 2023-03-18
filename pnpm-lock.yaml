@@ -241,7 +241,7 @@ importers:
       source-map-support: ^0.5.21
       strip-ansi: ^7.0.1
       strip-literal: ^1.0.1
-      tsconfck: ^2.0.3
+      tsconfck: ^2.1.0
       tslib: ^2.5.0
       types: link:./types
       ufo: ^1.1.1
@@ -305,7 +305,7 @@ importers:
       source-map-support: 0.5.21
       strip-ansi: 7.0.1
       strip-literal: 1.0.1
-      tsconfck: 2.0.3
+      tsconfck: 2.1.0
       tslib: 2.5.0
       types: link:types
       ufo: 1.1.1
@@ -643,6 +643,7 @@ importers:
       '@vitejs/test-dep-cjs-compiled-from-cjs': file:./dep-cjs-compiled-from-cjs
       '@vitejs/test-dep-cjs-compiled-from-esm': file:./dep-cjs-compiled-from-esm
       '@vitejs/test-dep-cjs-with-assets': file:./dep-cjs-with-assets
+      '@vitejs/test-dep-css-require': file:./dep-css-require
       '@vitejs/test-dep-esbuild-plugin-transform': file:./dep-esbuild-plugin-transform
       '@vitejs/test-dep-linked': link:./dep-linked
       '@vitejs/test-dep-linked-include': link:./dep-linked-include
@@ -674,6 +675,7 @@ importers:
       '@vitejs/test-dep-cjs-compiled-from-cjs': file:playground/optimize-deps/dep-cjs-compiled-from-cjs
       '@vitejs/test-dep-cjs-compiled-from-esm': file:playground/optimize-deps/dep-cjs-compiled-from-esm
       '@vitejs/test-dep-cjs-with-assets': file:playground/optimize-deps/dep-cjs-with-assets
+      '@vitejs/test-dep-css-require': file:playground/optimize-deps/dep-css-require
       '@vitejs/test-dep-esbuild-plugin-transform': file:playground/optimize-deps/dep-esbuild-plugin-transform
       '@vitejs/test-dep-linked': link:dep-linked
       '@vitejs/test-dep-linked-include': link:dep-linked-include
@@ -718,6 +720,9 @@ importers:
     specifiers: {}
 
   playground/optimize-deps/dep-cjs-with-assets:
+    specifiers: {}
+
+  playground/optimize-deps/dep-css-require:
     specifiers: {}
 
   playground/optimize-deps/dep-esbuild-plugin-transform:
@@ -835,6 +840,7 @@ importers:
       '@vitejs/test-resolve-exports-with-module': link:./exports-with-module
       '@vitejs/test-resolve-imports-pkg': link:./imports-path/other-pkg
       '@vitejs/test-resolve-linked': workspace:*
+      '@vitejs/test-resolve-sharp-dir': link:./sharp-dir
       es5-ext: 0.10.62
       normalize.css: ^8.0.1
     dependencies:
@@ -854,6 +860,7 @@ importers:
       '@vitejs/test-resolve-exports-with-module': link:exports-with-module
       '@vitejs/test-resolve-imports-pkg': link:imports-path/other-pkg
       '@vitejs/test-resolve-linked': link:../resolve-linked
+      '@vitejs/test-resolve-sharp-dir': link:sharp-dir
       es5-ext: 0.10.62
       normalize.css: 8.0.1
 
@@ -930,6 +937,12 @@ importers:
       bignumber.js: 9.1.1
     dependencies:
       bignumber.js: 9.1.1
+
+  playground/resolve/sharp-dir:
+    specifiers:
+      es5-ext: 0.10.62
+    dependencies:
+      es5-ext: 0.10.62
 
   playground/ssr-deps:
     specifiers:
@@ -9346,12 +9359,12 @@ packages:
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
 
-  /tsconfck/2.0.3:
-    resolution: {integrity: sha512-o3DsPZO1+C98KqHMdAbWs30zpxD30kj8r9OLA4ML1yghx4khNDzaaShNalfluh8ZPPhzKe3qyVCP1HiZszSAsw==}
+  /tsconfck/2.1.0:
+    resolution: {integrity: sha512-lztI9ohwclQHISVWrM/hlcgsRpphsii94DV9AQtAw2XJSVNiv+3ppdEsrL5J+xc5oTeHXe1qDqlOAGw8VSa9+Q==}
     engines: {node: ^14.13.1 || ^16 || >=18}
     hasBin: true
     peerDependencies:
-      typescript: ^4.3.5
+      typescript: ^4.3.5 || ^5.0.0
     peerDependenciesMeta:
       typescript:
         optional: true
@@ -10148,6 +10161,12 @@ packages:
   file:playground/optimize-deps/dep-cjs-with-assets:
     resolution: {directory: playground/optimize-deps/dep-cjs-with-assets, type: directory}
     name: '@vitejs/test-dep-cjs-with-assets'
+    version: 0.0.0
+    dev: false
+
+  file:playground/optimize-deps/dep-css-require:
+    resolution: {directory: playground/optimize-deps/dep-css-require, type: directory}
+    name: '@vitejs/test-dep-css-require'
     version: 0.0.0
     dev: false
 

@@ -232,7 +232,7 @@ export interface UserConfig {
   clearScreen?: boolean
   /**
    * Environment files directory. Can be an absolute path, or a path relative from
-   * the location of the config file itself.
+   * root.
    * @default root
    */
   envDir?: string
@@ -342,11 +342,13 @@ export type ResolvedConfig = Readonly<
     /** @internal */
     mainConfig: ResolvedConfig | null
     isProduction: boolean
+    envDir: string
     env: Record<string, any>
     resolve: Required<ResolveOptions> & {
       alias: Alias[]
     }
     plugins: readonly Plugin[]
+    esbuild: ESBuildOptions | false
     server: ResolvedServerOptions
     build: ResolvedBuildOptions
     preview: ResolvedPreviewOptions
@@ -656,9 +658,17 @@ export async function resolveConfig(
     mainConfig: null,
     isProduction,
     plugins: userPlugins,
+    esbuild:
+      config.esbuild === false
+        ? false
+        : {
+            jsxDev: !isProduction,
+            ...config.esbuild,
+          },
     server,
     build: resolvedBuildOptions,
     preview: resolvePreviewOptions(config.preview, server),
+    envDir,
     env: {
       ...userEnv,
       BASE_URL,
