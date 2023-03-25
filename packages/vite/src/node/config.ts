@@ -359,6 +359,7 @@ export type ResolvedConfig = Readonly<
     createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn
     optimizeDeps: DepOptimizationOptions
     /** @internal */
+    fileImportsMetadata: Map<string, string[]>
     packageCache: PackageCache
     worker: ResolveWorkerOptions
     appType: AppType
@@ -681,6 +682,7 @@ export async function resolveConfig(
       return DEFAULT_ASSETS_RE.test(file) || assetsFilter(file)
     },
     logger,
+    fileImportsMetadata: new Map(),
     packageCache: new Map(),
     createResolver,
     optimizeDeps: {

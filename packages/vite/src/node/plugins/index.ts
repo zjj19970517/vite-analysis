@@ -24,6 +24,7 @@ import { ensureWatchPlugin } from './ensureWatch'
 import { metadataPlugin } from './metadata'
 import { dynamicImportVarsPlugin } from './dynamicImportVars'
 import { importGlobPlugin } from './importMetaGlob'
+import { eagerTransformPlugin } from './eagerTransform'
 
 export async function resolvePlugins(
   config: ResolvedConfig,
@@ -41,6 +42,9 @@ export async function resolvePlugins(
   return [
     isWatch ? ensureWatchPlugin() : null,
     isBuild ? metadataPlugin() : null,
+    !isBuild && config.server.preTransformRequests
+      ? eagerTransformPlugin(config)
+      : null,
     preAliasPlugin(config),
     aliasPlugin({ entries: config.resolve.alias }),
     ...prePlugins,

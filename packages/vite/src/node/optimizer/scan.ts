@@ -364,6 +364,15 @@ function esbuildScanPlugin(
           isOptimizable(resolved, config.optimizeDeps)
         )
           return
+
+        importer = cleanUrl(importer)
+        const imports = config.fileImportsMetadata.get(importer)
+        if (!imports) {
+          config.fileImportsMetadata.set(importer, [resolved])
+        } else {
+          imports.push(resolved)
+        }
+
         return {
           path: resolved,
           namespace: 'html',
@@ -568,6 +577,14 @@ function esbuildScanPlugin(
             }
 
             const namespace = htmlTypesRE.test(resolved) ? 'html' : undefined
+
+            importer = cleanUrl(importer)
+            const imports = config.fileImportsMetadata.get(importer)
+            if (!imports) {
+              config.fileImportsMetadata.set(importer, [resolved])
+            } else {
+              imports.push(resolved)
+            }
 
             return {
               path: path.resolve(cleanUrl(resolved)),
