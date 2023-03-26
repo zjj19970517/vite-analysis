@@ -65,6 +65,7 @@ import type { PackageCache } from './packages'
 import { loadEnv, resolveEnvPrefix } from './env'
 import type { ResolvedSSROptions, SSROptions } from './ssr'
 import { resolveSSROptions } from './ssr'
+import type { Imports } from './optimizer/scanner'
 
 const debug = createDebugger('vite:config')
 
@@ -359,6 +360,7 @@ export type ResolvedConfig = Readonly<
     createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn
     optimizeDeps: DepOptimizationOptions
     /** @internal */
+    imports: Imports
     packageCache: PackageCache
     worker: ResolveWorkerOptions
     appType: AppType
@@ -681,6 +683,7 @@ export async function resolveConfig(
       return DEFAULT_ASSETS_RE.test(file) || assetsFilter(file)
     },
     logger,
+    imports: new Map(),
     packageCache: new Map(),
     createResolver,
     optimizeDeps: {

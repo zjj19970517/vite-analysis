@@ -30,6 +30,7 @@ import {
 import type { PluginContainer } from '../server/pluginContainer'
 import { createPluginContainer } from '../server/pluginContainer'
 import { transformGlobImport } from '../plugins/importMetaGlob'
+import { scanImports as _scanImports } from './scanner'
 
 type ResolveIdOptions = Parameters<PluginContainer['resolveId']>[2]
 
@@ -61,83 +62,37 @@ export function scanImports(config: ResolvedConfig): {
   const start = performance.now()
   const deps: Record<string, string> = {}
   const missing: Record<string, string> = {}
-  let entries: string[]
 
   const scanContext = { cancelled: false }
 
-  const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
-    config,
-  ).then((computedEntries) => {
-    entries = computedEntries
-
-    if (!entries.length) {
-      if (!config.optimizeDeps.entries && !config.optimizeDeps.include) {
-        config.logger.warn(
-          colors.yellow(
-            '(!) Could not auto-determine entry point from rollupOptions or html files ' +
-              'and there are no explicit optimizeDeps.include patterns. ' +
-              'Skipping dependency pre-bundling.',
-          ),
-        )
+  const result = computeEntries(config)
+    .then((entries) => {
+      if (!entries.length) {
+        if (!config.optimizeDeps.entries && !config.optimizeDeps.include) {
+          config.logger.warn(
+            colors.yellow(
+              '(!) Could not auto-determine entry point from rollupOptions or html files ' +
+                'and there are no explicit optimizeDeps.include patterns. ' +
+                'Skipping dependency pre-bundling.',
+            ),
+          )
+        }
+        return
       }
-      return
-    }
-    if (scanContext.cancelled) return
 
-    debug(
-      `Crawling dependencies using entries: ${entries
-        .map((entry) => `\n  ${colors.dim(entry)}`)
-        .join('')}`,
-    )
-    return prepareEsbuildScanner(config, entries, deps, missing, scanContext)
-  })
+      if (scanContext.cancelled) return
 
-  const result = esbuildContext
-    .then((context) => {
-      function disposeContext() {
-        return context?.dispose().catch((e) => {
-          config.logger.error('Failed to dispose esbuild context', { error: e })
-        })
-      }
-      if (!context || scanContext?.cancelled) {
-        disposeContext()
-        return { deps: {}, missing: {} }
-      }
-      return context
-        .rebuild()
-        .then(() => {
-          return {
-            // Ensure a fixed order so hashes are stable and improve logs
-            deps: orderedDependencies(deps),
-            missing,
-          }
-        })
-        .finally(() => {
-          return disposeContext()
-        })
+      debug(
+        `Crawling dependencies using entries: ${entries
+          .map((entry) => `\n  ${colors.dim(entry)}`)
+          .join('')}`,
+      )
+
+      return _scanImports(entries, config, deps, missing, scanContext)
     })
-    .catch(async (e) => {
-      if (e.errors && e.message.includes('The build was canceled')) {
-        // esbuild logs an error when cancelling, but this is expected so
-        // return an empty result instead
-        return { deps: {}, missing: {} }
-      }
-
-      const prependMessage = colors.red(`\
-  Failed to scan for dependencies from entries:
-  ${entries.join('\n')}
-
-  `)
-      if (e.errors) {
-        const msgs = await formatMessages(e.errors, {
-          kind: 'error',
-          color: true,
-        })
-        e.message = prependMessage + msgs.join('\n')
-      } else {
-        e.message = prependMessage + e.message
-      }
-      throw e
+    .then(() => {
+      if (scanContext.cancelled) return { deps: {}, missing: {} }
+      return { deps, missing }
     })
     .finally(() => {
       if (isDebug) {
@@ -154,7 +109,6 @@ export function scanImports(config: ResolvedConfig): {
   return {
     cancel: async () => {
       scanContext.cancelled = true
-      return esbuildContext.then((context) => context?.cancel())
     },
     result,
   }
