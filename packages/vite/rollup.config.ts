@@ -6,9 +6,11 @@ import typescript from '@rollup/plugin-typescript'
 import commonjs from '@rollup/plugin-commonjs'
 import json from '@rollup/plugin-json'
 import MagicString from 'magic-string'
-import type { Plugin, RollupOptions } from 'rollup'
+import type { Plugin } from 'rollup'
 import { defineConfig } from 'rollup'
 import licensePlugin from './rollupLicensePlugin'
+
+const isProduction = !process.env.ROLLUP_WATCH
 
 const pkg = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url)).toString(),
@@ -25,7 +27,7 @@ const envConfig = defineConfig({
   ],
   output: {
     file: path.resolve(__dirname, 'dist/client', 'env.mjs'),
-    sourcemap: true,
+    sourcemap: !isProduction,
     sourcemapPathTransform(relativeSourcePath) {
       return path.basename(relativeSourcePath)
     },
@@ -45,7 +47,7 @@ const clientConfig = defineConfig({
   ],
   output: {
     file: path.resolve(__dirname, 'dist/client', 'client.mjs'),
-    sourcemap: true,
+    sourcemap: !isProduction,
     sourcemapPathTransform(relativeSourcePath) {
       return path.basename(relativeSourcePath)
     },
@@ -146,69 +148,55 @@ function createNodePlugins(
   ]
 }
 
-function createNodeConfig(isProduction: boolean) {
-  return defineConfig({
-    ...sharedNodeOptions,
-    input: {
-      index: path.resolve(__dirname, 'src/node/index.ts'),
-      cli: path.resolve(__dirname, 'src/node/cli.ts'),
-      constants: path.resolve(__dirname, 'src/node/constants.ts'),
-    },
-    output: {
-      ...sharedNodeOptions.output,
-      sourcemap: !isProduction,
-    },
-    external: [
-      'fsevents',
-      ...Object.keys(pkg.dependencies),
-      ...(isProduction ? [] : Object.keys(pkg.devDependencies)),
-    ],
-    plugins: createNodePlugins(
-      isProduction,
-      !isProduction,
-      // in production we use api-extractor for dts generation
-      // in development we need to rely on the rollup ts plugin
-      isProduction ? false : './dist/node',
-    ),
-  })
-}
+const nodeConfig = defineConfig({
+  ...sharedNodeOptions,
+  input: {
+    index: path.resolve(__dirname, 'src/node/index.ts'),
+    cli: path.resolve(__dirname, 'src/node/cli.ts'),
+    constants: path.resolve(__dirname, 'src/node/constants.ts'),
+  },
+  output: {
+    ...sharedNodeOptions.output,
+    sourcemap: !isProduction,
+  },
+  external: [
+    'fsevents',
+    ...Object.keys(pkg.dependencies),
+    ...(isProduction ? [] : Object.keys(pkg.devDependencies)),
+  ],
+  plugins: createNodePlugins(
+    isProduction,
+    !isProduction,
+    // in production we use api-extractor for dts generation
+    // in development we need to rely on the rollup ts plugin
+    isProduction ? false : './dist/node',
+  ),
+})
 
-function createCjsConfig(isProduction: boolean) {
-  return defineConfig({
-    ...sharedNodeOptions,
-    input: {
-      publicUtils: path.resolve(__dirname, 'src/node/publicUtils.ts'),
-    },
-    output: {
-      dir: './dist',
-      entryFileNames: `node-cjs/[name].cjs`,
-      chunkFileNames: 'node-cjs/chunks/dep-[hash].js',
-      exports: 'named',
-      format: 'cjs',
-      externalLiveBindings: false,
-      freeze: false,
-      sourcemap: false,
-    },
-    external: [
-      'fsevents',
-      ...Object.keys(pkg.dependencies),
-      ...(isProduction ? [] : Object.keys(pkg.devDependencies)),
-    ],
-    plugins: [...createNodePlugins(false, false, false), bundleSizeLimit(120)],
-  })
-}
+const cjsConfig = defineConfig({
+  ...sharedNodeOptions,
+  input: {
+    publicUtils: path.resolve(__dirname, 'src/node/publicUtils.ts'),
+  },
+  output: {
+    dir: './dist',
+    entryFileNames: `node-cjs/[name].cjs`,
+    chunkFileNames: 'node-cjs/chunks/dep-[hash].js',
+    exports: 'named',
+    format: 'cjs',
+    externalLiveBindings: false,
+    freeze: false,
+    sourcemap: false,
+  },
+  external: [
+    'fsevents',
+    ...Object.keys(pkg.dependencies),
+    ...(isProduction ? [] : Object.keys(pkg.devDependencies)),
+  ],
+  plugins: [...createNodePlugins(false, false, false), bundleSizeLimit(120)],
+})
 
-export default (commandLineArgs: any): RollupOptions[] => {
-  const isDev = commandLineArgs.watch
-  const isProduction = !isDev
-
-  return defineConfig([
-    envConfig,
-    clientConfig,
-    createNodeConfig(isProduction),
-    createCjsConfig(isProduction),
-  ])
-}
+export default defineConfig([envConfig, clientConfig, nodeConfig, cjsConfig])
 
 // #region ======== Plugins ========
 
