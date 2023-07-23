@@ -146,8 +146,11 @@ function createNodePlugins(
   ]
 }
 
-function createNodeConfig(isProduction: boolean) {
-  return defineConfig({
+const nodeConfig = defineConfig((args) => {
+  const isDev = args.watch
+  const isProduction = !isDev
+
+  return {
     ...sharedNodeOptions,
     input: {
       index: path.resolve(__dirname, 'src/node/index.ts'),
@@ -171,45 +174,12 @@ function createNodeConfig(isProduction: boolean) {
       // in development we need to rely on the rollup ts plugin
       isProduction ? false : './dist/node',
     ),
-  })
-}
+  }
+})
 
-function createCjsConfig(isProduction: boolean) {
-  return defineConfig({
-    ...sharedNodeOptions,
-    input: {
-      publicUtils: path.resolve(__dirname, 'src/node/publicUtils.ts'),
-    },
-    output: {
-      dir: './dist',
-      entryFileNames: `node-cjs/[name].cjs`,
-      chunkFileNames: 'node-cjs/chunks/dep-[hash].js',
-      exports: 'named',
-      format: 'cjs',
-      externalLiveBindings: false,
-      freeze: false,
-      sourcemap: false,
-    },
-    external: [
-      'fsevents',
-      ...Object.keys(pkg.dependencies),
-      ...(isProduction ? [] : Object.keys(pkg.devDependencies)),
-    ],
-    plugins: [...createNodePlugins(false, false, false), bundleSizeLimit(120)],
-  })
-}
-
-export default (commandLineArgs: any): RollupOptions[] => {
-  const isDev = commandLineArgs.watch
-  const isProduction = !isDev
-
-  return defineConfig([
-    envConfig,
-    clientConfig,
-    createNodeConfig(isProduction),
-    createCjsConfig(isProduction),
-  ])
-}
+export default defineConfig((args) => {
+  return [envConfig, clientConfig, nodeConfig(args) as RollupOptions]
+})
 
 // #region ======== Plugins ========
 
@@ -309,33 +279,6 @@ const __require = require;
       return {
         code: s.toString(),
         map: s.generateMap({ hires: true }),
-      }
-    },
-  }
-}
-
-/**
- * Guard the bundle size
- *
- * @param limit size in KB
- */
-function bundleSizeLimit(limit: number): Plugin {
-  return {
-    name: 'bundle-limit',
-    generateBundle(options, bundle) {
-      const size = Buffer.byteLength(
-        Object.values(bundle)
-          .map((i) => ('code' in i ? i.code : ''))
-          .join(''),
-        'utf-8',
-      )
-      const kb = size / 1024
-      if (kb > limit) {
-        throw new Error(
-          `Bundle size exceeded ${limit}kb, current size is ${kb.toFixed(
-            2,
-          )}kb.`,
-        )
       }
     },
   }

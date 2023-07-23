@@ -3,7 +3,7 @@ import type { InlineConfig } from '..'
 import type { PluginOption, UserConfig, UserConfigExport } from '../config'
 import { defineConfig, resolveConfig } from '../config'
 import { resolveEnvPrefix } from '../env'
-import { mergeConfig } from '../publicUtils'
+import { mergeConfig } from '../utils'
 
 describe('mergeConfig', () => {
   test('handles configs with different alias schemas', () => {

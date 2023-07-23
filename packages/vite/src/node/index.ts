@@ -11,7 +11,20 @@ export { transformWithEsbuild } from './plugins/esbuild'
 export { resolvePackageEntry } from './plugins/resolve'
 export { resolvePackageData } from './packages'
 export { buildErrorMessage } from './server/middlewares/error'
-export * from './publicUtils'
+export { VERSION as version } from './constants'
+export { version as esbuildVersion } from 'esbuild'
+export { VERSION as rollupVersion } from 'rollup'
+export {
+  splitVendorChunkPlugin,
+  splitVendorChunk,
+  isCSSRequest,
+} from './plugins/splitVendorChunk'
+export { normalizePath, mergeConfig, mergeAlias, createFilter } from './utils'
+export { send } from './server/send'
+export { createLogger } from './logger'
+export { searchForWorkspaceRoot } from './server/searchRoot'
+export { isFileServingAllowed } from './server/middlewares/static'
+export { loadEnv, resolveEnvPrefix } from './env'
 
 // additional types
 export type { FilterPattern } from './utils'

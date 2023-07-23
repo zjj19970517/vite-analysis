@@ -24,7 +24,10 @@ export async function serve() {
       const conf = await fs.readFile(pathToConf, 'utf8')
       await fs.writeFile(
         pathToConf,
-        conf.replace('export default', 'module.exports = '),
+        conf
+          .replace('export default', 'module.exports = ')
+          .replace(`import { defineConfig } from 'vite'`, '')
+          .replace('defineConfig', ''),
       )
     }
 
@@ -39,5 +42,16 @@ export async function serve() {
     await fs.writeJSON(fromTestDir(`${configName}-module`, 'package.json'), {
       type: 'module',
     })
+
+    // edit cjs directory to not `import { ... } from "vite"` as Vite is ESM only
+    if (['js', 'ts'].includes(configName)) {
+      const conf = await fs.readFile(pathToConf, 'utf8')
+      await fs.writeFile(
+        pathToConf,
+        conf
+          .replace(`import { defineConfig } from 'vite'`, '')
+          .replace('defineConfig', ''),
+      )
+    }
   }
 }
