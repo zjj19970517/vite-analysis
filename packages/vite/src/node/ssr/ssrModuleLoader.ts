@@ -127,7 +127,6 @@ async function instantiateModule(
 
   const resolveOptions: InternalResolveOptionsWithOverrideConditions = {
     mainFields: ['main'],
-    browserField: true,
     conditions: [],
     overrideConditions: ['production', 'development'],
     extensions: ['.js', '.cjs', '.json'],
