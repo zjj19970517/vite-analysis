@@ -707,6 +707,17 @@ if (!isBuild) {
     }, '[wow]1')
   })
 
+  test('handle circular imports', async () => {
+    await page.goto(viteTestUrl)
+    const el = await page.$('.circular')
+    expect(await el.textContent()).toBe('[success]')
+
+    editFile('circular/mod-c.js', (code) =>
+      code.replace('[success]', '[success]updated'),
+    )
+    await untilUpdated(() => page.textContent('.circular'), '[success]updated')
+  })
+
   test('keep hmr reload after missing import on server startup', async () => {
     const file = 'missing-import/a.js'
     const importCode = "import 'missing-modules'"

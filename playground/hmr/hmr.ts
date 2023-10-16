@@ -4,6 +4,7 @@ import './importing-updated'
 import './invalidation/parent'
 import './file-delete-restore'
 import './optional-chaining/parent'
+import './circular'
 
 export const foo = 1
 text('.app', foo)
