@@ -8,8 +8,10 @@ if (!import.meta.url.includes('node_modules')) {
   } catch (e) {}
 }
 
+// 性能分析打点：开始时间
 global.__vite_start_time = performance.now()
 
+// debug 模式
 // check debug mode first before requiring the CLI.
 const debugIndex = process.argv.findIndex((arg) => /^(?:-d|--debug)$/.test(arg))
 const filterIndex = process.argv.findIndex((arg) =>
@@ -40,7 +42,9 @@ if (debugIndex > 0) {
   }
 }
 
+// 核心是执行 start 方法
 function start() {
+  // 入口文件是 node/cli.js
   return import('../dist/node/cli.js')
 }
 

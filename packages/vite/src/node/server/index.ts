@@ -328,9 +328,11 @@ export interface ResolvedServerUrls {
   network: string[]
 }
 
+// 核心函数：创建一个 Server 服务
 export function createServer(
   inlineConfig: InlineConfig = {},
 ): Promise<ViteDevServer> {
+  // inlineConfig 属于 cli 命令传入的 config
   return _createServer(inlineConfig, { ws: true })
 }
 
@@ -338,17 +340,21 @@ export async function _createServer(
   inlineConfig: InlineConfig = {},
   options: { ws: boolean },
 ): Promise<ViteDevServer> {
+  // 解析配置，合并 inlineConfig 和 vite.config.ts 的配置
   const config = await resolveConfig(inlineConfig, 'serve')
 
   const { root, server: serverConfig } = config
+  // 解析 https 配置
   const httpsOptions = await resolveHttpsConfig(config.server.https)
   const { middlewareMode } = serverConfig
 
+  // 解析文件监听选项
   const resolvedWatchOptions = resolveChokidarOptions(config, {
     disableGlobbing: true,
     ...serverConfig.watch,
   })
 
+  // connect 是一个 Node.js 的中间件框架，用于构建可重用的、模块化的和可扩展的 Web 应用程序。它允许开发者将多个中间件函数连接在一起，以处理 HTTP 请求和响应。
   const middlewares = connect() as Connect.Server
   const httpServer = middlewareMode
     ? null
@@ -646,6 +652,7 @@ export async function _createServer(
   middlewares.use(serveStaticMiddleware(root, server))
 
   // html fallback
+  // "html fallback" 是指在前端开发中，当访问的路由不存在时，服务器会返回一个默认的 HTML 页面作为回退。这个 HTML 页面通常是一个单页应用的入口文件，用于处理前端路由。
   if (config.appType === 'spa' || config.appType === 'mpa') {
     middlewares.use(htmlFallbackMiddleware(root, config.appType === 'spa'))
   }

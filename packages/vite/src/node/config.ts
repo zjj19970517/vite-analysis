@@ -408,10 +408,14 @@ export async function resolveConfig(
   defaultMode = 'development',
   defaultNodeEnv = 'development',
 ): Promise<ResolvedConfig> {
+  // 初始化配置
   let config = inlineConfig
   let configFileDependencies: string[] = []
+
+  // 设置的模式：开发 or 生产
   let mode = inlineConfig.mode || defaultMode
   const isNodeEnvSet = !!process.env.NODE_ENV
+  // 一个缓存，用于存储 package.json 的路径
   const packageCache: PackageCache = new Map()
 
   // some dependencies e.g. @vue/compiler-* relies on NODE_ENV for getting
@@ -426,8 +430,11 @@ export async function resolveConfig(
     ssrBuild: !!config.build?.ssr,
   }
 
+  // 此时 config 是用户配置的 cli 行内对象
   let { configFile } = config
+  // 判断是否有指定配置文件 path
   if (configFile !== false) {
+    // 没有指定配置文件 path，那么就去寻找默认的配置文件
     const loadResult = await loadConfigFromFile(
       configEnv,
       configFile,
@@ -435,16 +442,21 @@ export async function resolveConfig(
       config.logLevel,
     )
     if (loadResult) {
+      // 合并配置：loadResult.config 是配置文件中的配置，config 是 cli 行内配置
       config = mergeConfig(loadResult.config, config)
+      // 保存配置文件的路径
       configFile = loadResult.path
+      // 保存配置文件的依赖
       configFileDependencies = loadResult.dependencies
     }
   }
 
-  // user config may provide an alternative mode. But --mode has a higher priority
+  // resolve mode 优先级为：行内配置 > 环境变量 > 默认值
   mode = inlineConfig.mode || config.mode || mode
+  // 保存模式
   configEnv.mode = mode
 
+  // resolve root
   const filterPlugin = (p: Plugin) => {
     if (!p) {
       return false
@@ -456,18 +468,18 @@ export async function resolveConfig(
       return p.apply === command
     }
   }
-  // Some plugins that aren't intended to work in the bundling of workers (doing post-processing at build time for example).
-  // And Plugins may also have cached that could be corrupted by being used in these extra rollup calls.
-  // So we need to separate the worker plugin from the plugin that vite needs to run.
+
+  // 解析 worker 插件
   const rawWorkerUserPlugins = (
     (await asyncFlatten(config.worker?.plugins || [])) as Plugin[]
   ).filter(filterPlugin)
 
-  // resolve plugins
+  // 解析用户插件
   const rawUserPlugins = (
     (await asyncFlatten(config.plugins || [])) as Plugin[]
   ).filter(filterPlugin)
 
+  //
   const [prePlugins, normalPlugins, postPlugins] =
     sortUserPlugins(rawUserPlugins)
 

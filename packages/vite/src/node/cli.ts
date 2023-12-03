@@ -11,6 +11,7 @@ import { VERSION } from './constants'
 import { bindShortcuts } from './shortcuts'
 import { resolveConfig } from '.'
 
+// 通过 cac 创建一个 cli 对象
 const cli = cac('vite')
 
 // global options
@@ -122,6 +123,8 @@ const convertBase = (v: any) => {
   return v
 }
 
+// === 注册各种命令 ===
+
 cli
   .option('-c, --config <file>', `[string] use specified config file`)
   .option('--base <path>', `[string] public base path (default: /)`, {
@@ -133,11 +136,14 @@ cli
   .option('-f, --filter <filter>', `[string] filter debug logs`)
   .option('-m, --mode <mode>', `[string] set env mode`)
 
-// dev
+// 定义 dev 命令
+// 这是一个默认的命令
 cli
   .command('[root]', 'start dev server') // default command
+  // 设置别名
   .alias('serve') // the command is called 'serve' in Vite's API
   .alias('dev') // alias to align with the script name
+  // 设置参数选项
   .option('--host [host]', `[string] specify hostname`, { type: [convertHost] })
   .option('--port <port>', `[number] specify port`)
   .option('--https', `[boolean] use TLS + HTTP/2`)
@@ -148,6 +154,7 @@ cli
     '--force',
     `[boolean] force the optimizer to ignore the cache and re-bundle`,
   )
+  // 设置 action 回调处理
   .action(async (root: string, options: ServerOptions & GlobalCLIOptions) => {
     filterDuplicateOptions(options)
     // output structure is preserved even after bundling so require()
