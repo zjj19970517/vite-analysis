@@ -624,6 +624,8 @@ export async function createServer(
     )
   }
 
+  // 核心转换处理中间件
+  // 处理 JS 请求、CSS 请求等，几乎所有的模块请求都会经过这里，最终在这里完成模块的编译处理
   // main transform middleware
   middlewares.use(transformMiddleware(server))
 

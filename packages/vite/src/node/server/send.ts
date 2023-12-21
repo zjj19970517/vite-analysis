@@ -45,6 +45,7 @@ export function send(
     return
   }
 
+  // 设置 res header
   res.setHeader('Content-Type', alias[type] || type)
   res.setHeader('Cache-Control', cacheControl)
   res.setHeader('Etag', etag)
@@ -55,7 +56,7 @@ export function send(
     }
   }
 
-  // inject source map reference
+  // 注入 sourcemap 引用
   if (map && map.mappings) {
     if (type === 'js' || type === 'css') {
       content = getCodeWithSourcemap(type, content.toString(), map)
