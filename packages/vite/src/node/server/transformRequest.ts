@@ -159,22 +159,19 @@ async function loadAndTransform(
   let code: string | null = null
   let map: SourceDescription['map'] = null
 
-  // load
+  // 第一步：完成模块的 load 加载
   const loadStart = isDebug ? performance.now() : 0
+  // 使用 pluginContainer 调度执行所有插件的 load Hook 钩子函数
   const loadResult = await pluginContainer.load(id, { ssr })
   if (loadResult == null) {
-    // if this is an html request and there is no load result, skip ahead to
-    // SPA fallback.
+    // 插件没有处理结果的情况下
     if (options.html && !id.endsWith('.html')) {
       return null
     }
-    // try fallback loading it from fs as string
-    // if the file is a binary, there should be a plugin that already loaded it
-    // as string
-    // only try the fallback if access is allowed, skip for out of root url
-    // like /service-worker.js or /api/users
+
     if (options.ssr || isFileServingAllowed(file, server)) {
       try {
+        // 兜底策略：通过 fs 模块读取文件内容，完成加载
         code = await fs.readFile(file, 'utf-8')
         isDebug && debugLoad(`${timeFrom(loadStart)} [fs] ${prettyUrl}`)
       } catch (e) {
@@ -183,16 +180,20 @@ async function loadAndTransform(
         }
       }
     }
+    
     if (code) {
       try {
+        // 提取代码中的 source map
         map = (
+          // 从一个已经包含了内联 source map 的 JS 代码内容中提取 source map
           convertSourceMap.fromSource(code) ||
+          // 并不是从 JS 文件中提取内联的 source map，而是从文件中提取对外部 source map 文件的引用。
           (await convertSourceMap.fromMapFileSource(
             code,
             createConvertSourceMapReadMap(file),
           ))
         )?.toObject()
-
+        // 将 code 的 source map 相关的注释内容去除
         code = code.replace(convertSourceMap.mapFileCommentRegex, blankReplacer)
       } catch (e) {
         logger.warn(`Failed to load source map for ${url}.`, {
@@ -201,6 +202,7 @@ async function loadAndTransform(
       }
     }
   } else {
+    // 插件有处理结果的情况下
     isDebug && debugLoad(`${timeFrom(loadStart)} [plugin] ${prettyUrl}`)
     if (isObject(loadResult)) {
       code = loadResult.code
@@ -209,6 +211,7 @@ async function loadAndTransform(
       code = loadResult
     }
   }
+  // 处理没有 code 的情况，会抛出异常
   if (code == null) {
     const isPublicFile = checkPublicFile(url, config)
     const msg = isPublicFile
@@ -229,11 +232,13 @@ async function loadAndTransform(
     err.code = isPublicFile ? ERR_LOAD_PUBLIC_URL : ERR_LOAD_URL
     throw err
   }
-  // ensure module in graph after successful load
+  // 第二步：初始化 Module Node
   const mod = await moduleGraph.ensureEntryFromUrl(url, ssr)
+  // 确保文件被 watcher 观察上了
   ensureWatchedFile(watcher, mod.file, root)
 
-  // transform
+  // 第三步：模块内容的转换处理
+  // 使用 pluginContainer 调度执行所有插件的 transform Hook 钩子函数
   const transformStart = isDebug ? performance.now() : 0
   const transformResult = await pluginContainer.transform(code, id, {
     inMap: map,
@@ -252,9 +257,11 @@ async function loadAndTransform(
   } else {
     isDebug && debugTransform(`${timeFrom(transformStart)} ${prettyUrl}`)
     code = transformResult.code!
+    // 转换后的结果中如果有 sourcemap 内容，那么会重新赋值 map
     map = transformResult.map
   }
 
+  // 针对 sourcemap 的特殊处理，目前暂时先不关注这块内容了
   if (map && mod.file) {
     map = (typeof map === 'string' ? JSON.parse(map) : map) as SourceMap
     if (map.mappings && !map.sourcesContent) {
@@ -299,6 +306,7 @@ async function loadAndTransform(
     }
   }
 
+  // 第四步：返回转换后的结果内容 TransformResult，包括 code、map、etag
   const result =
     ssr && !server.config.experimental.skipSsrTransform
       ? await server.ssrTransform(code, map as SourceMap, url, originalCode)
