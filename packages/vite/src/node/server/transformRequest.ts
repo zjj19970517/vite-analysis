@@ -42,60 +42,46 @@ export interface TransformOptions {
   html?: boolean
 }
 
+/** 请求编译构建处理，该方法返回的是一个处理 request 的异步函数 */
 export function transformRequest(
   url: string,
   server: ViteDevServer,
   options: TransformOptions = {},
 ): Promise<TransformResult | null> {
+  // 构建一个缓存 key，通常就是请求的这个 url
   const cacheKey = (options.ssr ? 'ssr:' : options.html ? 'html:' : '') + url
 
-  // This module may get invalidated while we are processing it. For example
-  // when a full page reload is needed after the re-processing of pre-bundled
-  // dependencies when a missing dep is discovered. We save the current time
-  // to compare it to the last invalidation performed to know if we should
-  // cache the result of the transformation or we should discard it as stale.
-  //
-  // A module can be invalidated due to:
-  // 1. A full reload because of pre-bundling newly discovered deps
-  // 2. A full reload after a config change
-  // 3. The file that generated the module changed
-  // 4. Invalidation for a virtual module
-  //
-  // For 1 and 2, a new request for this module will be issued after
-  // the invalidation as part of the browser reloading the page. For 3 and 4
-  // there may not be a new request right away because of HMR handling.
-  // In all cases, the next time this module is requested, it should be
-  // re-processed.
-  //
-  // We save the timestamp when we start processing and compare it with the
-  // last time this module is invalidated
+  // 保存一个请求开始处理的时间戳，后面将其与该模块上次失效的时间进行比较
+  // 获取一个当前请求的时间戳
   const timestamp = Date.now()
 
+  // 判断该模块 url 是否已在请求中了，是否为 pending 了
+  // 如果已经在处理中了，那么自然就不需要再重复发起请求了
   const pending = server._pendingRequests.get(cacheKey)
   if (pending) {
+    // 首先获取到 url 对应的 ModuleNode
     return server.moduleGraph
       .getModuleByUrl(removeTimestampQuery(url), options.ssr)
       .then((module) => {
+        // 这里的 module 就是我们想要获取到的 ModuleNode 节点
+        
         if (!module || pending.timestamp > module.lastInvalidationTimestamp) {
-          // The pending request is still valid, we can safely reuse its result
+          // 如果 pending 中的请求，时间戳要 > 模块的最后一次失效时间
+          // 可以使用 pending 中的请求，进行重用
           return pending.request
         } else {
-          // Request 1 for module A     (pending.timestamp)
-          // Invalidate module A        (module.lastInvalidationTimestamp)
-          // Request 2 for module A     (timestamp)
-
-          // First request has been invalidated, abort it to clear the cache,
-          // then perform a new doTransform.
+          // pending 中的请求取消，将会重新发起
           pending.abort()
           return transformRequest(url, server, options)
         }
       })
   }
 
+  // 开始编译处理（在这个函数中完成核心的 resolve、load、transform 处理）
   const request = doTransform(url, server, options, timestamp)
 
-  // Avoid clearing the cache of future requests if aborted
   let cleared = false
+  // 清空缓存的函数
   const clearCache = () => {
     if (!cleared) {
       server._pendingRequests.delete(cacheKey)
@@ -103,49 +89,52 @@ export function transformRequest(
     }
   }
 
-  // Cache the request and clear it once processing is done
+  // 将 url 对应的请求，设置到请求队列中，或者说是缓存起来
   server._pendingRequests.set(cacheKey, {
     request,
     timestamp,
     abort: clearCache,
   })
+  // request 是一个异步函数，当他执行完毕后，需要执行清楚缓存（或移出请求队列）的操作
   request.then(clearCache, clearCache)
 
+  // 最终返回出这个 request 异步执行函数
   return request
 }
 
+/** 执行编译处理 */
 async function doTransform(
   url: string,
   server: ViteDevServer,
   options: TransformOptions,
   timestamp: number,
 ) {
+  // 移除时间戳查询参数
   url = removeTimestampQuery(url)
 
   const { config, pluginContainer } = server
   const prettyUrl = isDebug ? prettifyUrl(url, config.root) : ''
   const ssr = !!options.ssr
 
+  // 第一步：通过 url 获取模块 ModuleNode 
+  // getModuleByUrl 内部会调用路径解析工厂函数 resolveId
   const module = await server.moduleGraph.getModuleByUrl(url, ssr)
 
-  // check if we have a fresh cache
+  // 从模块信息中获取 transformResult 转换结果
   const cached =
     module && (ssr ? module.ssrTransformResult : module.transformResult)
   if (cached) {
-    // TODO: check if the module is "partially invalidated" - i.e. an import
-    // down the chain has been fully invalidated, but this current module's
-    // content has not changed.
-    // in this case, we can reuse its previous cached result and only update
-    // its import timestamps.
-
+    // 如果有缓存结果，说明已经编译处理过了，直接返回
     isDebug && debugCache(`[memory] ${prettyUrl}`)
     return cached
   }
 
-  // resolve
+  // 第二步：使用 pluginContainer 调度执行所有插件的 resolveId Hook 钩子函数
+  // 解析出 url 对应的模块
   const id =
     (await pluginContainer.resolveId(url, undefined, { ssr }))?.id || url
 
+  // ⭐️ loadAndTransform 方法完成 load 和 transform
   const result = loadAndTransform(id, url, server, options, timestamp)
 
   getDepsOptimizer(config, ssr)?.delayDepsOptimizerUntil(id, () => result)
